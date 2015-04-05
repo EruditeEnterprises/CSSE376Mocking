@@ -57,12 +57,17 @@ namespace ExpediaTest
         [TestMethod()]
         public void TestThatHotelDoesGetRoomOccupantFromTheDatabase()
         {
-            IDatabase mockDB = mocks.StrictMock<IDatabase>();
+            IDatabase mockDB = mocks.DynamicMock<IDatabase>();
             String roomOccupant = "Whale Rider";
             String anotherRoomOccupant = "Raptor Wrangler";
 
-            Expect.Call(mockDB.getRoomOccupant(24)).Return(roomOccupant);
-            Expect.Call(mockDB.getRoomOccupant(1025)).Return(anotherRoomOccupant);
+            using (mocks.Ordered())
+            {
+                Expect.Call(mockDB.getRoomOccupant(24)).Return(roomOccupant);
+                Expect.Call(mockDB.getRoomOccupant(1025)).Return(anotherRoomOccupant);
+                mockDB.Stub(x => x.getRoomOccupant(Arg<int>.Is.Anything)).Return("Empty room");
+            }
+            
             mocks.ReplayAll();
 
             Hotel target = new Hotel(10);
@@ -70,10 +75,12 @@ namespace ExpediaTest
             target.Database = mockDB;
 
             String result;
-            result = target.getRoomOccupant(1025);
-            Assert.AreEqual(anotherRoomOccupant, result);
             result = target.getRoomOccupant(24);
             Assert.AreEqual(roomOccupant, result);
+            result = target.getRoomOccupant(1025);
+            Assert.AreEqual(anotherRoomOccupant, result);
+            result = target.getRoomOccupant(25);
+            Assert.AreEqual("Empty room", result);
             mocks.VerifyAll();
         }
 
